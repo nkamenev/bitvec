@@ -22,7 +22,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/yourusername/bitvec"
+	"github.com/nkamenev/bitvec"
 )
 
 func main() {
