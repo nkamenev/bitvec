@@ -12,7 +12,7 @@
 ## Installation
 
 ```bash
-go get github.com/yourusername/bitvec
+go get github.com/nkamenev/bitvec
 ```
 
 ## Example
