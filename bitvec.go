@@ -71,6 +71,12 @@ func (bv *BitVector) Flip(i int) {
 	bv.words[word(i)] ^= 1 << offset(i)
 }
 
+// Size returns the number of bits currently represented by the BitVector.
+// Note that the underlying storage may be larger due to word alignment.
+func (bv *BitVector) Size() int {
+	return bv.size
+}
+
 // Clear resets all bits to 0.
 func (bv *BitVector) Clear() {
 	for i := range bv.words {
