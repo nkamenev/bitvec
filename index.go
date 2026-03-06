@@ -80,7 +80,7 @@ func NewIndex(vec *BitVector) *BitIndex {
 // The operation runs in O(1) time.
 //
 // Panics if i is out of bounds.
-func (bi *BitIndex) Rank(i int) uint64 {
+func (bi *BitIndex) Rank(i uint64) uint64 {
 	bi.vec.checkBounds(i)
 
 	wordIdx := i >> wordSizeLog
@@ -88,7 +88,7 @@ func (bi *BitIndex) Rank(i int) uint64 {
 	superIdx := i >> superBlockLog
 
 	r := uint64(0)
-	if superIdx < len(bi.superRank) {
+	if superIdx < uint64(len(bi.superRank)) {
 		r = bi.superRank[superIdx]
 	}
 	r += uint64(bi.blockRank[wordIdx])

@@ -4,7 +4,7 @@ import "testing"
 
 func TestBitVectorBasic(t *testing.T) {
 	type exp struct {
-		i        int
+		i        uint64
 		expected bool
 	}
 	tests := []struct {
