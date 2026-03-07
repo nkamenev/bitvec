@@ -1,6 +1,8 @@
 package bitvec
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestBitVectorBasic(t *testing.T) {
 	type exp struct {
@@ -13,7 +15,7 @@ func TestBitVectorBasic(t *testing.T) {
 		checks []exp
 	}{
 		{
-			name: "set within size",
+			name: "set_within_size",
 			ops: func(bv *BitVector) {
 				bv.Set(0)
 				bv.Set(3)
@@ -28,7 +30,7 @@ func TestBitVectorBasic(t *testing.T) {
 			},
 		},
 		{
-			name: "set beyond initial size (dynamic expand)",
+			name: "set_beyond_initial_size_(dynamic expand)",
 			ops: func(bv *BitVector) {
 				bv.Set(100)
 				bv.Set(64)
@@ -64,7 +66,7 @@ func TestBitVectorBasic(t *testing.T) {
 			},
 		},
 		{
-			name: "get out of bounds panics",
+			name: "get_out_of_bounds_panics",
 			ops: func(bv *BitVector) {
 				defer func() {
 					if r := recover(); r == nil {
@@ -99,21 +101,21 @@ func TestString(t *testing.T) {
 		want string
 	}{
 		{
-			name: "empty vector",
+			name: "empty_vector",
 			bv: func() *BitVector {
 				return NewVector(0, 0)
 			},
 			want: "",
 		},
 		{
-			name: "all zeros",
+			name: "all_zeros",
 			bv: func() *BitVector {
 				return NewVector(5, 5)
 			},
 			want: "00000",
 		},
 		{
-			name: "basic set",
+			name: "basic_set",
 			bv: func() *BitVector {
 				bv := NewVector(8, 8)
 				bv.Set(0)
@@ -124,7 +126,7 @@ func TestString(t *testing.T) {
 			want: "10010001",
 		},
 		{
-			name: "flip and delete",
+			name: "flip_and_delete",
 			bv: func() *BitVector {
 				bv := NewVector(5, 5)
 				bv.Set(1)
@@ -137,7 +139,7 @@ func TestString(t *testing.T) {
 			want: "00010",
 		},
 		{
-			name: "dynamic expand",
+			name: "dynamic_expand",
 			bv: func() *BitVector {
 				bv := NewVector(4, 4)
 				bv.Set(6)
@@ -153,6 +155,239 @@ func TestString(t *testing.T) {
 			got := bv.String()
 			if got != tt.want {
 				t.Errorf("String() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+func wantStr(sz int, ones ...int) string {
+	s := make([]byte, sz)
+	for i := range s {
+		s[i] = '0'
+	}
+	for _, bit := range ones {
+		if bit >= sz {
+			panic("bit position out of range")
+		}
+		s[bit] = '1'
+	}
+	return string(s)
+}
+
+func TestMergeFunc(t *testing.T) {
+	tests := []struct {
+		name    string
+		vecs    []*BitVector
+		wantStr string
+	}{
+		{
+			name:    "empty",
+			vecs:    nil,
+			wantStr: "",
+		},
+		{
+			name: "single_empty_vector",
+			vecs: []*BitVector{
+				NewVector(0, 0),
+			},
+			wantStr: "",
+		},
+		{
+			name: "single_vector",
+			vecs: []*BitVector{
+				func() *BitVector {
+					v := NewVector(5, 5)
+					v.Set(1)
+					v.Set(3)
+					return v
+				}(),
+			},
+			wantStr: "01010",
+		},
+		{
+			name: "two_vectors_aligned",
+			vecs: []*BitVector{
+				func() *BitVector {
+					v := NewVector(4, 4)
+					v.Set(0)
+					v.Set(2)
+					return v // 1010
+				}(),
+				func() *BitVector {
+					v := NewVector(4, 4)
+					v.Set(1)
+					v.Set(3)
+					return v // 0101
+				}(),
+			},
+			wantStr: "10100101",
+		},
+		{
+			name: "two_vectors_with_different_cap",
+			vecs: []*BitVector{
+				func() *BitVector {
+					v := NewVector(4, 10)
+					v.Set(0)
+					v.Set(2)
+					return v // 1010
+				}(),
+				func() *BitVector {
+					v := NewVector(4, 4)
+					v.Set(1)
+					v.Set(3)
+					return v // 0101
+				}(),
+			},
+			wantStr: "10100101",
+		},
+		{
+			name: "two_vectors_unaligned",
+			vecs: []*BitVector{
+				func() *BitVector {
+					v := NewVector(70, 70)
+					v.Set(0)
+					v.Set(65)
+					return v
+				}(),
+				func() *BitVector {
+					v := NewVector(70, 70)
+					v.Set(1)
+					v.Set(66)
+					return v
+				}(),
+			},
+			wantStr: wantStr(
+				140,
+				0, 65, 71, 136,
+			),
+		},
+		{
+			name: "three_vectors_different_sizes",
+			vecs: []*BitVector{
+				func() *BitVector {
+					v := NewVector(3, 3)
+					v.Set(0)
+					return v // 100
+				}(),
+				func() *BitVector {
+					v := NewVector(5, 5)
+					v.Set(2)
+					return v // 0010
+				}(),
+				func() *BitVector {
+					v := NewVector(4, 4)
+					v.Set(3)
+					return v // 0001
+				}(),
+			},
+			wantStr: "100001000001",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := Merge(tt.vecs...)
+			if got.String() != tt.wantStr {
+				t.Errorf("Merge() = \n%swant %s\n", got.String(), tt.wantStr)
+			}
+		})
+	}
+}
+
+func TestMergeMethod(t *testing.T) {
+	tests := []struct {
+		name          string
+		init          *BitVector
+		toMerge       []*BitVector
+		wantStr       string
+		expectCapSame bool
+	}{
+		{
+			name: "merge_into_empty_vector",
+			init: NewVector(0, 10),
+			toMerge: []*BitVector{
+				func() *BitVector {
+					v := NewVector(5, 5)
+					v.Set(1)
+					return v
+				}(),
+			},
+			wantStr:       "01000",
+			expectCapSame: true,
+		},
+		{
+			name: "merge_with_enough_capacity",
+			init: func() *BitVector {
+				v := NewVector(3, 10)
+				v.Set(0)
+				return v
+			}(),
+			toMerge: []*BitVector{
+				func() *BitVector {
+					v := NewVector(2, 2)
+					v.Set(1)
+					return v
+				}(),
+			},
+			wantStr:       "10001",
+			expectCapSame: true,
+		},
+		{
+			name: "merge_requires_realloc",
+			init: func() *BitVector {
+				v := NewVector(5, 5)
+				v.Set(0)
+				return v
+			}(),
+			toMerge: []*BitVector{
+				func() *BitVector {
+					v := NewVector(70, 70)
+					v.Set(1)
+					return v
+				}(),
+			},
+			wantStr: wantStr(
+				75,
+				0, 6,
+			),
+			expectCapSame: false,
+		},
+		{
+			name: "merge_multiple_vectors_with_realloc",
+			init: NewVector(1, 1),
+			toMerge: []*BitVector{
+				func() *BitVector {
+					v := NewVector(63, 63)
+					v.Set(0)
+					return v
+				}(),
+				func() *BitVector {
+					v := NewVector(63, 63)
+					v.Set(0)
+					return v
+				}(),
+			},
+			wantStr: wantStr(
+				127,
+				1, 64,
+			),
+			expectCapSame: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			oldCap := cap(tt.init.words)
+			tt.init.Merge(tt.toMerge...)
+			gotStr := tt.init.String()
+			if gotStr != tt.wantStr {
+				t.Errorf("Merge() = %s, want %s", gotStr, tt.wantStr)
+			}
+			newCap := cap(tt.init.words)
+			if tt.expectCapSame && newCap != oldCap {
+				t.Errorf("expected capacity to stay the same, but changed from %d to %d", oldCap, newCap)
+			}
+			if !tt.expectCapSame && newCap <= oldCap {
+				t.Errorf("expected capacity to grow, but it stayed %d", newCap)
 			}
 		})
 	}
