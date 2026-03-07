@@ -44,13 +44,22 @@ func NewVectorFromWords(words []uint64) *BitVector {
 // If i >= current size, the vector is automatically expanded to fit.
 func (bv *BitVector) Set(i uint64) {
 	w := word(i)
+
 	if i >= bv.size {
 		nWords := w + 1
+
 		if nWords > uint64(len(bv.words)) {
-			newWords := make([]uint64, nWords)
-			copy(newWords, bv.words)
-			bv.words = newWords
+			if nWords <= uint64(cap(bv.words)) {
+				// We have enough capacity — just extend the slice.
+				bv.words = bv.words[:nWords]
+			} else {
+				// Capacity is insufficient — allocate a new backing array.
+				newWords := make([]uint64, nWords)
+				copy(newWords, bv.words)
+				bv.words = newWords
+			}
 		}
+
 		bv.size = i + 1
 	}
 
