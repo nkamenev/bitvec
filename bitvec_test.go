@@ -78,7 +78,7 @@ func TestBitVectorBasic(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			bv := NewVector(10)
+			bv := NewVector(10, 10)
 			if tt.ops != nil {
 				tt.ops(bv)
 			}
@@ -101,21 +101,21 @@ func TestString(t *testing.T) {
 		{
 			name: "empty vector",
 			bv: func() *BitVector {
-				return NewVector(0)
+				return NewVector(0, 0)
 			},
 			want: "",
 		},
 		{
 			name: "all zeros",
 			bv: func() *BitVector {
-				return NewVector(5)
+				return NewVector(5, 5)
 			},
 			want: "00000",
 		},
 		{
 			name: "basic set",
 			bv: func() *BitVector {
-				bv := NewVector(8)
+				bv := NewVector(8, 8)
 				bv.Set(0)
 				bv.Set(3)
 				bv.Set(7)
@@ -126,7 +126,7 @@ func TestString(t *testing.T) {
 		{
 			name: "flip and delete",
 			bv: func() *BitVector {
-				bv := NewVector(5)
+				bv := NewVector(5, 5)
 				bv.Set(1)
 				bv.Set(2)
 				bv.Flip(2)
@@ -139,7 +139,7 @@ func TestString(t *testing.T) {
 		{
 			name: "dynamic expand",
 			bv: func() *BitVector {
-				bv := NewVector(4)
+				bv := NewVector(4, 4)
 				bv.Set(6)
 				return bv
 			},

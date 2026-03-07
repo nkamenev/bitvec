@@ -13,7 +13,7 @@ func buildTestVector(bits []uint64) *BitVector {
 			max = b
 		}
 	}
-	bv := NewVector(max + 1)
+	bv := NewVector(max+1, max+1)
 	for _, b := range bits {
 		bv.Set(b)
 	}
@@ -163,7 +163,7 @@ func TestSelectTooLarge(t *testing.T) {
 const benchSize = 1_000_000
 
 func buildSparseVector(n uint64, step uint64) *BitVector {
-	bv := NewVector(n)
+	bv := NewVector(n, n)
 	var i uint64
 	for ; i < n; i += step {
 		bv.Set(i)
@@ -172,7 +172,7 @@ func buildSparseVector(n uint64, step uint64) *BitVector {
 }
 
 func buildDenseVector(n uint64) *BitVector {
-	bv := NewVector(n)
+	bv := NewVector(n, n)
 	for i := range n {
 		bv.Set(i)
 	}

@@ -15,11 +15,14 @@ type BitVector struct {
 }
 
 // NewVector creates a new BitVector with n bits (all zeroed).
-func NewVector(n uint64) *BitVector {
-	nWords := (n + wordSize - 1) / wordSize
+func NewVector(size uint64, cp uint64) *BitVector {
+	if cp < size {
+		cp = size
+	}
+	nWords := (size + wordSize - 1) / wordSize
 	return &BitVector{
-		words: make([]uint64, nWords),
-		size:  n,
+		words: make([]uint64, nWords, cp),
+		size:  size,
 	}
 }
 
