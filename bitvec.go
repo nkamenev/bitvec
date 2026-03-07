@@ -1,5 +1,7 @@
 package bitvec
 
+import "strings"
+
 const (
 	wordSize    = 64
 	wordSizeLog = 6
@@ -85,4 +87,26 @@ func (bv *BitVector) checkBounds(i uint64) {
 	if i >= bv.size {
 		panic("index out of range")
 	}
+}
+
+func (bv *BitVector) String() string {
+	if bv.size == 0 {
+		return ""
+	}
+
+	var b strings.Builder
+	b.Grow(int(bv.size))
+
+	for i := uint64(0); i < bv.size; i++ {
+		w := i >> wordSizeLog
+		o := i & (wordSize - 1)
+
+		if (bv.words[w]>>o)&1 == 1 {
+			b.WriteByte('1')
+		} else {
+			b.WriteByte('0')
+		}
+	}
+
+	return b.String()
 }

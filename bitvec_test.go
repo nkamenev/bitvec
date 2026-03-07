@@ -91,3 +91,69 @@ func TestBitVectorBasic(t *testing.T) {
 		})
 	}
 }
+
+func TestString(t *testing.T) {
+	tests := []struct {
+		name string
+		bv   func() *BitVector
+		want string
+	}{
+		{
+			name: "empty vector",
+			bv: func() *BitVector {
+				return NewVector(0)
+			},
+			want: "",
+		},
+		{
+			name: "all zeros",
+			bv: func() *BitVector {
+				return NewVector(5)
+			},
+			want: "00000",
+		},
+		{
+			name: "basic set",
+			bv: func() *BitVector {
+				bv := NewVector(8)
+				bv.Set(0)
+				bv.Set(3)
+				bv.Set(7)
+				return bv
+			},
+			want: "10010001",
+		},
+		{
+			name: "flip and delete",
+			bv: func() *BitVector {
+				bv := NewVector(5)
+				bv.Set(1)
+				bv.Set(2)
+				bv.Flip(2)
+				bv.Flip(3)
+				bv.Delete(1)
+				return bv
+			},
+			want: "00010",
+		},
+		{
+			name: "dynamic expand",
+			bv: func() *BitVector {
+				bv := NewVector(4)
+				bv.Set(6)
+				return bv
+			},
+			want: "0000001",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bv := tt.bv()
+			got := bv.String()
+			if got != tt.want {
+				t.Errorf("String() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
