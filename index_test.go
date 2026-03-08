@@ -2,6 +2,7 @@ package bitvec
 
 import (
 	"math/rand"
+	"sort"
 	"testing"
 	"time"
 )
@@ -98,6 +99,283 @@ func TestSelect(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestTotalOnes(t *testing.T) {
+	tests := []struct {
+		name     string
+		ones     []uint64
+		expected uint64
+	}{
+		{
+			name:     "empty_vector",
+			ones:     []uint64{},
+			expected: 0,
+		},
+		{
+			name:     "single_bit",
+			ones:     []uint64{42},
+			expected: 1,
+		},
+		{
+			name:     "multiple_bits",
+			ones:     []uint64{1, 3, 5, 7, 9},
+			expected: 5,
+		},
+		{
+			name:     "bits_across_word_boundary",
+			ones:     []uint64{63, 64, 65, 127, 128},
+			expected: 5,
+		},
+		{
+			name:     "bits_across_superblock_boundary",
+			ones:     []uint64{500, 511, 512, 513, 1024},
+			expected: 5,
+		},
+		{
+			name:     "dense_bits",
+			ones:     []uint64{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+			expected: 10,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bv := buildTestVector(tt.ones)
+			idx := NewIndex(bv)
+
+			got := idx.TotalOnes()
+			if got != tt.expected {
+				t.Errorf("TotalOnes() = %d, want %d", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestSelectNext(t *testing.T) {
+	tests := []struct {
+		name     string
+		ones     []uint64
+		pos      uint64
+		expected uint64
+		found    bool
+	}{
+		{
+			name:     "exact_match_at_position",
+			ones:     []uint64{1, 3, 5, 7, 9},
+			pos:      3,
+			expected: 3,
+			found:    true,
+		},
+		{
+			name:     "between_bits",
+			ones:     []uint64{1, 3, 5, 7, 9},
+			pos:      4,
+			expected: 5,
+			found:    true,
+		},
+		{
+			name:     "before_first_bit",
+			ones:     []uint64{10, 20, 30},
+			pos:      5,
+			expected: 10,
+			found:    true,
+		},
+		{
+			name:     "after_last_bit",
+			ones:     []uint64{10, 20, 30},
+			pos:      31,
+			expected: 0,
+			found:    false,
+		},
+		{
+			name:     "exactly_at_last_bit",
+			ones:     []uint64{10, 20, 30},
+			pos:      30,
+			expected: 30,
+			found:    true,
+		},
+		{
+			name:     "empty_vector",
+			ones:     []uint64{},
+			pos:      0,
+			expected: 0,
+			found:    false,
+		},
+		{
+			name:     "single_bit_before_it",
+			ones:     []uint64{100},
+			pos:      50,
+			expected: 100,
+			found:    true,
+		},
+		{
+			name:     "single_bit_after_it",
+			ones:     []uint64{100},
+			pos:      150,
+			expected: 0,
+			found:    false,
+		},
+		{
+			name:     "position_at_word_boundary",
+			ones:     []uint64{63, 64, 65},
+			pos:      63,
+			expected: 63,
+			found:    true,
+		},
+		{
+			name:     "position_just_after_word_boundary",
+			ones:     []uint64{63, 64, 65},
+			pos:      64,
+			expected: 64,
+			found:    true,
+		},
+		{
+			name:     "position_at_superblock_boundary",
+			ones:     []uint64{511, 512, 513},
+			pos:      511,
+			expected: 511,
+			found:    true,
+		},
+		{
+			name:     "position_just_after_superblock_boundary",
+			ones:     []uint64{511, 512, 513},
+			pos:      512,
+			expected: 512,
+			found:    true,
+		},
+		{
+			name:     "position_beyond_vector_size",
+			ones:     []uint64{1, 2, 3},
+			pos:      1000,
+			expected: 0,
+			found:    false,
+		},
+		{
+			name:     "dense_bits_exact_match",
+			ones:     []uint64{0, 1, 2, 3, 4, 5},
+			pos:      3,
+			expected: 3,
+			found:    true,
+		},
+		{
+			name:     "dense_bits_between",
+			ones:     []uint64{0, 1, 2, 3, 4, 5},
+			pos:      2,
+			expected: 2,
+			found:    true,
+		},
+		{
+			name:     "sparse_bits",
+			ones:     []uint64{1000, 2000, 3000, 4000},
+			pos:      2500,
+			expected: 3000,
+			found:    true,
+		},
+		{
+			name:     "position_exactly_at_end_of_vector",
+			ones:     []uint64{10, 20, 30},
+			pos:      31, // vec size 31 (max bit 30 + 1)
+			expected: 0,
+			found:    false,
+		},
+		{
+			name:     "position_at_last_bit_of_last_word",
+			ones:     []uint64{63},
+			pos:      63,
+			expected: 63,
+			found:    true,
+		},
+		{
+			name:     "position_after_last_bit_of_last_word",
+			ones:     []uint64{63},
+			pos:      64,
+			expected: 0,
+			found:    false,
+		},
+		{
+			name:     "multiple_bits_in_same_word",
+			ones:     []uint64{10, 11, 12, 13, 14, 15},
+			pos:      12,
+			expected: 12,
+			found:    true,
+		},
+		{
+			name:     "between_bits_in_same_word",
+			ones:     []uint64{10, 12, 14},
+			pos:      11,
+			expected: 12,
+			found:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bv := buildTestVector(tt.ones)
+			idx := NewIndex(bv)
+
+			got, ok := idx.SelectNext(tt.pos)
+			if ok != tt.found {
+				t.Errorf("SelectNext(%d) found = %v, want %v", tt.pos, ok, tt.found)
+			}
+			if got != tt.expected {
+				t.Errorf("SelectNext(%d) = %d, want %d", tt.pos, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestSelectNextConsistency(t *testing.T) {
+	rand.Seed(time.Now().UnixNano())
+	ones := make([]uint64, 100)
+	for i := range ones {
+		ones[i] = uint64(rand.Intn(10000))
+	}
+	unique := make(map[uint64]bool)
+	for _, pos := range ones {
+		unique[pos] = true
+	}
+	sorted := make([]uint64, 0, len(unique))
+	for pos := range unique {
+		sorted = append(sorted, pos)
+	}
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i] < sorted[j] })
+
+	bv := buildTestVector(sorted)
+	idx := NewIndex(bv)
+
+	t.Run("consistency with Rank/Select", func(t *testing.T) {
+		for _, pos := range sorted {
+			next, ok := idx.SelectNext(pos)
+			if !ok || next != pos {
+				t.Errorf("SelectNext(%d) = %d, want %d", pos, next, pos)
+			}
+
+			r := idx.Rank(pos)
+			if r < idx.TotalOnes() {
+				nextSelect, _ := idx.Select(r + 1)
+				if nextSelect != pos {
+					t.Errorf("Rank/Select mismatch: Rank(%d)=%d, Select(%d)=%d",
+						pos, r, r+1, nextSelect)
+				}
+			}
+		}
+	})
+
+	t.Run("consistency between positions", func(t *testing.T) {
+		for i := 0; i < len(sorted)-1; i++ {
+			current := sorted[i]
+			next := sorted[i+1]
+
+			if next > current+1 {
+				mid := current + 1
+				got, ok := idx.SelectNext(mid)
+				if !ok || got != next {
+					t.Errorf("SelectNext(%d) = %d, want %d", mid, got, next)
+				}
+			}
+		}
+	})
 }
 
 func TestRankSelectConsistency(t *testing.T) {

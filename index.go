@@ -171,3 +171,37 @@ func (bi *BitIndex) Select(k uint64) (uint64, bool) {
 
 	return 0, false
 }
+
+// SelectNextFast returns the position of the first 1 at or after position pos.
+func (bi *BitIndex) SelectNext(pos uint64) (uint64, bool) {
+	if pos >= bi.vec.size {
+		return 0, false
+	}
+
+	// Check current pos
+	if bi.vec.Get(pos) {
+		return pos, true
+	}
+
+	// Count rank up to pos (not including pos)
+	rank := bi.Rank(pos)
+
+	// If rank is equal to the total number of ones, then there are no ones after pos.
+	if rank >= bi.TotalOnes() {
+		return 0, false
+	}
+
+	// Looking for the next one (rank+1)-th
+	return bi.Select(rank + 1)
+}
+
+// TotalOnes returns the total number of set bits in the bit vector
+func (bi *BitIndex) TotalOnes() uint64 {
+	if len(bi.superRank) == 0 {
+		return 0
+	}
+	lastSuper := bi.superRank[len(bi.superRank)-1]
+	lastBlock := bi.blockRank[len(bi.blockRank)-1]
+	lastWord := bi.vec.words[len(bi.vec.words)-1]
+	return lastSuper + uint64(lastBlock) + uint64(bits.OnesCount64(lastWord))
+}
