@@ -113,14 +113,14 @@ func (bi *BitIndex) Rank(i uint64) uint64 {
 //
 // Returns -1 if k exceeds the total number of set bits.
 // Panics if k == 0.
-func (bi *BitIndex) Select(k uint64) int {
+func (bi *BitIndex) Select(k uint64) (uint64, bool) {
 	if k == 0 {
 		panic("k must be >= 1")
 	}
 
 	var s int
 	if len(bi.superRank) == 0 {
-		return -1
+		return 0, false
 	}
 	// Find first superblock where cumulative rank >= k (lower_bound).
 	idx := sort.Search(len(bi.superRank), func(i int) bool {
@@ -142,7 +142,7 @@ func (bi *BitIndex) Select(k uint64) int {
 	wStart := s << (superBlockLog - wordSizeLog)
 	wEnd := min(wStart+wordsPerSB, nWords)
 	if wStart >= wEnd {
-		return -1
+		return 0, false
 	}
 
 	// Bin search inside the superblock over its words.
@@ -152,7 +152,7 @@ func (bi *BitIndex) Select(k uint64) int {
 		return uint64(bi.blockRank[w])+uint64(bits.OnesCount64(bi.vec.words[w])) >= k
 	})
 	if off == wEnd-wStart {
-		return -1
+		return 0, false
 	}
 	w := wStart + off
 
@@ -163,11 +163,11 @@ func (bi *BitIndex) Select(k uint64) int {
 	for word != 0 {
 		pos := bits.TrailingZeros64(word)
 		if kInWord == 1 {
-			return w<<wordSizeLog + pos
+			return uint64(w<<wordSizeLog + pos), true
 		}
 		kInWord--
 		word &= word - 1 // clear lowest set bit
 	}
 
-	return -1
+	return 0, false
 }

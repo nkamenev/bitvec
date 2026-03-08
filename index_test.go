@@ -91,8 +91,8 @@ func TestSelect(t *testing.T) {
 			idx := NewIndex(bv)
 
 			for k := 1; k <= len(tt.expected); k++ {
-				got := idx.Select(uint64(k))
-				if got != tt.expected[k-1] {
+				got, _ := idx.Select(uint64(k))
+				if got != uint64(tt.expected[k-1]) {
 					t.Fatalf("Select1(%d) = %d, want %d", k, got, tt.expected[k-1])
 				}
 			}
@@ -106,7 +106,7 @@ func TestRankSelectConsistency(t *testing.T) {
 	idx := NewIndex(bv)
 
 	for k := 1; k <= len(ones); k++ {
-		pos := idx.Select(uint64(k))
+		pos, _ := idx.Select(uint64(k))
 		r := idx.Rank(uint64(pos))
 		if r != uint64(k-1) {
 			t.Fatalf("Rank/Select mismatch: Select1(%d)=%d but Rank1=%d", k, pos, r)
@@ -132,7 +132,7 @@ func TestWordBoundary(t *testing.T) {
 	idx := NewIndex(bv)
 
 	for k, expected := range ones {
-		if got := idx.Select(uint64(k + 1)); uint64(got) != expected {
+		if got, _ := idx.Select(uint64(k + 1)); uint64(got) != expected {
 			t.Fatalf("Select boundary failed: got %d want %d", got, expected)
 		}
 	}
@@ -144,7 +144,7 @@ func TestSuperBlockBoundary(t *testing.T) {
 	idx := NewIndex(bv)
 
 	for k, expected := range ones {
-		if got := idx.Select(uint64(k + 1)); uint64(got) != expected {
+		if got, _ := idx.Select(uint64(k + 1)); uint64(got) != expected {
 			t.Fatalf("Select superblock failed: got %d want %d", got, expected)
 		}
 	}
@@ -155,7 +155,7 @@ func TestSelectTooLarge(t *testing.T) {
 	bv := buildTestVector(ones)
 	idx := NewIndex(bv)
 
-	if got := idx.Select(4); got != -1 {
+	if got, ok := idx.Select(4); ok {
 		t.Fatalf("expected -1 for too large k, got %d", got)
 	}
 }
@@ -228,7 +228,7 @@ func BenchmarkSelectSparse(b *testing.B) {
 
 	for b.Loop() {
 		k := uint64(rng.Intn(int(total)) + 1)
-		_ = idx.Select(k)
+		_, _ = idx.Select(k)
 	}
 }
 
@@ -241,6 +241,6 @@ func BenchmarkSelectDense(b *testing.B) {
 
 	for b.Loop() {
 		k := uint64(rng.Intn(int(total)) + 1)
-		_ = idx.Select(k)
+		_, _ = idx.Select(k)
 	}
 }
