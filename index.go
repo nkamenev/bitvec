@@ -205,3 +205,10 @@ func (bi *BitIndex) TotalOnes() uint64 {
 	lastWord := bi.vec.words[len(bi.vec.words)-1]
 	return lastSuper + uint64(lastBlock) + uint64(bits.OnesCount64(lastWord))
 }
+
+// GetBitvector returns a copy of the bitvector
+func (bi *BitIndex) GetBitvector() *BitVector {
+	ws := make([]uint64, len(bi.vec.words), cap(bi.vec.words))
+	copy(ws, bi.vec.words)
+	return &BitVector{words: ws, size: bi.vec.size}
+}
