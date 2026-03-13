@@ -172,7 +172,7 @@ func (bi *BitIndex) Select(k uint64) (uint64, bool) {
 	return 0, false
 }
 
-// SelectNextFast returns the position of the first 1 at or after position pos.
+// SelectNext returns the position of the first 1 at or after position pos.
 func (bi *BitIndex) SelectNext(pos uint64) (uint64, bool) {
 	if pos >= bi.vec.size {
 		return 0, false
